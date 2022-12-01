@@ -28,14 +28,11 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle6 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dgPids = new System.Windows.Forms.DataGridView();
-            this.cbSerialPorts = new System.Windows.Forms.ComboBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.btnSerialConnect = new System.Windows.Forms.Button();
-            this.btnSave = new System.Windows.Forms.Button();
             this.Title = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.pid = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.bit_1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -49,6 +46,11 @@
             this.formula = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.val = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lastupdate = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.cbSerialPorts = new System.Windows.Forms.ComboBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.btnSerialConnect = new System.Windows.Forms.Button();
+            this.btnSave = new System.Windows.Forms.Button();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dgPids)).BeginInit();
             this.SuspendLayout();
             // 
@@ -81,44 +83,6 @@
             this.dgPids.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgPids_CellContentClick);
             this.dgPids.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgPids_CellEndEdit);
             this.dgPids.UserAddedRow += new System.Windows.Forms.DataGridViewRowEventHandler(this.dgPids_UserAddedRow);
-            // 
-            // cbSerialPorts
-            // 
-            this.cbSerialPorts.FormattingEnabled = true;
-            this.cbSerialPorts.Location = new System.Drawing.Point(52, 6);
-            this.cbSerialPorts.Name = "cbSerialPorts";
-            this.cbSerialPorts.Size = new System.Drawing.Size(121, 21);
-            this.cbSerialPorts.TabIndex = 1;
-            this.cbSerialPorts.DropDown += new System.EventHandler(this.cbSerialPorts_DropDown);
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 9);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(34, 13);
-            this.label1.TabIndex = 2;
-            this.label1.Text = "serial:";
-            // 
-            // btnSerialConnect
-            // 
-            this.btnSerialConnect.Location = new System.Drawing.Point(179, 6);
-            this.btnSerialConnect.Name = "btnSerialConnect";
-            this.btnSerialConnect.Size = new System.Drawing.Size(75, 23);
-            this.btnSerialConnect.TabIndex = 3;
-            this.btnSerialConnect.Text = "Connect";
-            this.btnSerialConnect.UseVisualStyleBackColor = true;
-            this.btnSerialConnect.Click += new System.EventHandler(this.btnSerialConnect_Click);
-            // 
-            // btnSave
-            // 
-            this.btnSave.Location = new System.Drawing.Point(713, 4);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(75, 23);
-            this.btnSave.TabIndex = 4;
-            this.btnSave.Text = "save";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // Title
             // 
@@ -212,6 +176,50 @@
             this.lastupdate.Name = "lastupdate";
             this.lastupdate.ReadOnly = true;
             // 
+            // cbSerialPorts
+            // 
+            this.cbSerialPorts.FormattingEnabled = true;
+            this.cbSerialPorts.Location = new System.Drawing.Point(52, 6);
+            this.cbSerialPorts.Name = "cbSerialPorts";
+            this.cbSerialPorts.Size = new System.Drawing.Size(121, 21);
+            this.cbSerialPorts.TabIndex = 1;
+            this.cbSerialPorts.DropDown += new System.EventHandler(this.cbSerialPorts_DropDown);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(12, 9);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(34, 13);
+            this.label1.TabIndex = 2;
+            this.label1.Text = "serial:";
+            // 
+            // btnSerialConnect
+            // 
+            this.btnSerialConnect.Location = new System.Drawing.Point(179, 6);
+            this.btnSerialConnect.Name = "btnSerialConnect";
+            this.btnSerialConnect.Size = new System.Drawing.Size(75, 23);
+            this.btnSerialConnect.TabIndex = 3;
+            this.btnSerialConnect.Text = "Connect";
+            this.btnSerialConnect.UseVisualStyleBackColor = true;
+            this.btnSerialConnect.Click += new System.EventHandler(this.btnSerialConnect_Click);
+            // 
+            // btnSave
+            // 
+            this.btnSave.Location = new System.Drawing.Point(713, 4);
+            this.btnSave.Name = "btnSave";
+            this.btnSave.Size = new System.Drawing.Size(75, 23);
+            this.btnSave.TabIndex = 4;
+            this.btnSave.Text = "save";
+            this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            // 
+            // timer1
+            // 
+            this.timer1.Enabled = true;
+            this.timer1.Interval = 1000;
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -252,6 +260,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn formula;
         private System.Windows.Forms.DataGridViewTextBoxColumn val;
         private System.Windows.Forms.DataGridViewTextBoxColumn lastupdate;
+        private System.Windows.Forms.Timer timer1;
     }
 }
 
