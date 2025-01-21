@@ -19,13 +19,17 @@ namespace iMievCan
     public partial class Form1 : Form
     {
         System.IO.Ports.SerialPort Serial;
+        TcpClientHandler tcpClientHandler;
+
+        public DataTable dataModel;
+
         class PID
         {
             public string _PID;
 
             public static List<PID> _list = new List<PID>();
 
-            public DataGridViewRow row = null;
+            public DataRow row = null;
 
             public bool CanCalculate = false;
             //  public string[] serialData = { "0", "0", "0", "0", "0", "0", "0", "0" };
@@ -39,13 +43,18 @@ namespace iMievCan
                 _PID = p_PID;
             }
 
-            public static PID Add(string p_PID, DataGridViewRow p_Row)
+
+            public static int curID = 0;
+            public static PID Add(string p_PID, DataRow p_Row)
             {
+                Debug.WriteLine("new pid: " + p_PID);
                 PID p = new PID(p_PID);
                 _list.Add(p);
                 p.row = p_Row;
-                p.row.Tag = p;
-                p.row.Cells["pid"].Value = p_PID;
+                //  p.row.Tag = p;
+                p.row["nr"] = curID;
+                p.row["pid"] = p_PID;
+                curID++;
                 return p;
             }
 
@@ -59,7 +68,7 @@ namespace iMievCan
                     {
                         if (data[i] != CellsValues[i] || !dataReceived)
                         {
-                            row.Cells[i + 2].Value = data[i].ToString();//("X");
+                            row[i + 2] = data[i].ToString();//("X");
                             lastRefresh[i] = DateTime.Now;
                         }
                     }
@@ -106,12 +115,12 @@ namespace iMievCan
                     receivedTimeString = (receivedTime / 1000).ToString() + "s";
                 }
 
-                row.Cells[12].Value = receivedTimeString;
+                row[12] = receivedTimeString;
             }
             public void CalculateVal()
             {
 
-                string formula = (string)row.Cells[10].Value;
+                string formula = (string)row[10];
                 if (!string.IsNullOrEmpty(formula) && formula.Trim() != "")
                 {
                     formula = formula.Replace("b0", CellsValues[0].ToString());
@@ -122,8 +131,8 @@ namespace iMievCan
                     formula = formula.Replace("b5", CellsValues[5].ToString());
                     formula = formula.Replace("b6", CellsValues[6].ToString());
                     formula = formula.Replace("b7", CellsValues[7].ToString());
-                    
-                    row.Cells[11].Value = Evaluate(formula.Replace("$", string.Empty), formula.StartsWith("$"));
+
+                    row[11] = Evaluate(formula.Replace("$", string.Empty), formula.StartsWith("$"));
                 }
 
             }
@@ -132,9 +141,34 @@ namespace iMievCan
 
         public Form1()
         {
+            var dt = new DataTable();
+            dt.Columns.Add("nr");
+            dt.Columns.Add("title");
+            dt.Columns.Add("pid");
+            dt.Columns.Add("bit1");
+            dt.Columns.Add("bit2");
+            dt.Columns.Add("bit3");
+            dt.Columns.Add("bit4");
+            dt.Columns.Add("bit5");
+            dt.Columns.Add("bit6");
+            dt.Columns.Add("bit7");
+            dt.Columns.Add("bit8");
+            dt.Columns.Add("formula");
+            dt.Columns.Add("val");
+            dt.Columns.Add("lastupdate");
 
+            foreach (DataColumn col in dt.Columns)
+            {
+                col.AllowDBNull = false;
+                col.DefaultValue = "";
+              
+            }
+
+            dataModel = dt;
 
             InitializeComponent();
+            dgPids.AutoGenerateColumns = false;
+            dgPids.DataSource = dataModel;
         }
 
 
@@ -182,6 +216,7 @@ namespace iMievCan
 
             Serial = new System.IO.Ports.SerialPort(cbSerialPorts.Text, 115200, System.IO.Ports.Parity.None, 8, System.IO.Ports.StopBits.One);
             Serial.Handshake = System.IO.Ports.Handshake.None;
+
             Serial.DtrEnable = true;
             Serial.DataReceived += Serial_DataReceived;
 
@@ -210,37 +245,62 @@ namespace iMievCan
             catch { }
         }
 
+        object pidsLock = new object();
         void evaluateResponse(string[] serialData)
         {
-            string senderPID = int.Parse(serialData[0]).ToString("X").ToUpper();
-            if (senderPID == "346")
+            try
             {
-                Debug.WriteLine("");
-            }
-            List<PID> pids = new List<PID>();
-            byte[] Values = { 0, 0,0, 0, 0, 0, 0, 0 };
-            for (int i = 0; i <= Values.Length - 1; i++)
-            {
-               // byte val = 0;
-                // byte.TryParse(serialData[i + 1], out val);
+               
+                if (serialData.Length != 9)
+                    return;
 
-                Values[i] = byte.Parse(serialData[i + 1]);// byte.Parse(serialData[i]);
-            }
+                string senderPID = serialData[0];//.ToString("X").ToUpper();
+                if (senderPID == "346")
+                {
+                    Debug.WriteLine("");
+                }
+                List<PID> pids = new List<PID>();
+                byte[] Values = { 0, 0, 0, 0, 0, 0, 0, 0 };
+                for (int i = 0; i <= Values.Length - 1; i++)
+                {
+                    // byte val = 0;
+                    // byte.TryParse(serialData[i + 1], out val);
+                    byte val = 0;
+                    if (byte.TryParse(serialData[i + 1], System.Globalization.NumberStyles.HexNumber, null, out var res))
+                    {
+                        val = res;
+                    }
+                    else
+                        return;
+                    Values[i] = val;// byte.Parse(serialData[i]);
+                }
+                lock (pidsLock)
+                {
+                    foreach (PID p in PID._list)
+                    {
+                        if (p._PID == senderPID) pids.Add(p);
+                    }
+                }
 
-            foreach (PID p in PID._list)
-            {
-                if (p._PID == senderPID) pids.Add(p);
-            }
 
-            if (pids.Count == 0)
-            {
-                DataGridViewRow newRow = dgPids.Rows[dgPids.Rows.Add()];
-                pids.Add(PID.Add(senderPID, newRow));
-            }
+                if (pids.Count == 0)
+                {
 
-            foreach (PID pid in pids)
+
+
+                    var newRow = dataModel.NewRow();
+                    dataModel.Rows.Add(newRow);
+                    pids.Add(PID.Add(senderPID, newRow));
+                }
+
+                foreach (PID pid in pids)
+                {
+                    pid.NewData(Values);
+                }
+            }
+            catch (Exception ex)
             {
-                pid.NewData(Values);
+                Debug.Write(ex.ToString());
             }
 
         }
@@ -257,6 +317,7 @@ namespace iMievCan
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            tcpClientHandler?.Disconnect();
             CloseSerial();
             SaveData();
         }
@@ -268,43 +329,43 @@ namespace iMievCan
                 if (e.ColumnIndex == 10)
                 {
                     PID p = (PID)dgPids.Rows[e.RowIndex].Tag;
-                    p.CanCalculate = p.row.Cells[10].Value.ToString().Trim() != "";
+                    p.CanCalculate = p.row[10].ToString().Trim() != "";
                     p.CalculateVal();
                 }
+                //else if (e.ColumnIndex == 1)
+                //{
+                //    DataRow newRow = dataModel.Rows[e.RowIndex];
+                //    if (newRow.Tag == null)
+                //    {
+                //        if (newRow.Cells[1].Value != null && newRow.Cells[1].Value.ToString().Trim() != "")
+                //        {
+                //            string s_newPID = newRow.Cells[1].Value.ToString();
+
+                //            byte[] data = { 0, 0, 0, 0, 0, 0, 0, 0 };
+                //            foreach (PID pid in PID._list)
+                //            {
+                //                if (pid._PID == s_newPID)
+                //                {
+                //                    /* for (int i = 0; i <= pid.serialData.Length - 1; i++)
+                //                     {
+                //                         data[i] = pid.serialData[i].ToString();
+                //                     }*/
+                //                    data = pid.CellsValues;
+                //                    break;
+                //                }
+                //            }
+
+                //            PID.Add(s_newPID, newRow).NewData(data);
+                //            SaveData();
+                //        }
+                //        else
+                //        {
+                //            dgPids.Rows.Remove(newRow);
+                //        }
+                //    }
+
+                //}
                 else if (e.ColumnIndex == 1)
-                {
-                    DataGridViewRow newRow = dgPids.Rows[e.RowIndex];
-                    if (newRow.Tag == null)
-                    {
-                        if (newRow.Cells[1].Value != null && newRow.Cells[1].Value.ToString().Trim() != "")
-                        {
-                            string s_newPID = newRow.Cells[1].Value.ToString();
-
-                            byte[] data = { 0, 0, 0, 0, 0, 0, 0, 0 };
-                            foreach (PID pid in PID._list)
-                            {
-                                if (pid._PID == s_newPID)
-                                {
-                                    /* for (int i = 0; i <= pid.serialData.Length - 1; i++)
-                                     {
-                                         data[i] = pid.serialData[i].ToString();
-                                     }*/
-                                    data = pid.CellsValues;
-                                    break;
-                                }
-                            }
-
-                            PID.Add(s_newPID, newRow).NewData(data);
-                            SaveData();
-                        }
-                        else
-                        {
-                            dgPids.Rows.Remove(newRow);
-                        }
-                    }
-
-                }
-                else if (e.ColumnIndex == 0)
                 {
                     SaveData();
                 }
@@ -380,12 +441,14 @@ namespace iMievCan
                             }
                             catch { }
                         }
-                        DataGridViewRow newRow = dgPids.Rows[dgPids.Rows.Add(dataValues)];
+                        var newRow = dataModel.NewRow();//dgPids.Rows[dgPids.Rows.Add(dataValues)];
+                        dgPids.Rows.Add(newRow);
+
                         PID pid = PID.Add(senderPID, newRow);
 
                         pid.NewData(byteData, true);
 
-                        newRow.Cells["lastupdate"].Value = dataValues[12];
+                        newRow["lastupdate"] = dataValues[12];
                     }
                 }
             }
@@ -410,10 +473,89 @@ namespace iMievCan
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            foreach (PID pid in PID._list)
+            try
             {
-                pid.RefreshTime();
+                foreach (PID pid in PID._list)
+                {
+                    pid.RefreshTime();
+                }
+            }catch { }
+        }
+
+        bool tcpStarted = false;
+        private async void btnTcpConnect_Click(object sender, EventArgs e)
+        {
+            tcpStarted = false;
+            tcpClientHandler?.Disconnect();
+            tcpClientHandler = null;
+
+            tcpClientHandler = new TcpClientHandler(txtTcp.Text, 7777);
+            await tcpClientHandler.ConnectAsync();
+
+            tcpClientHandler.DataReceived += TcpClientHandler_DataReceived;
+
+            bool con = true;
+            while (con)
+            {
+                Task.Delay(2000).Wait();
+                try
+                {
+                    await tcpClientHandler.SendDataAsync("ATI");
+                    con = false;
+                }
+                catch
+                {
+                    con = true;
+                }
+
             }
+
+
+
+            string[] cmds =
+                {            "ATZ", "STP 0", "ATI", "ATSP6", "STSBR 500000", "ATCER 0","ATH1" , "ATCF 300"   ,"ATCM 700"       };
+
+
+            for (int i = 0; i < cmds.Length; i++)
+            {
+                await tcpClientHandler.SendDataAsync(cmds[i]);
+                Task.Delay(1000).Wait();
+            }
+
+
+
+
+            await tcpClientHandler.SendDataAsync("ATMA");
+            tcpStarted = true;
+            Task.Delay(2000).Wait();
+
+
+            _ = Task.Run(async () =>
+            {
+
+                while (tcpStarted)
+                {
+                    Task.Delay(5000).Wait();
+                    await tcpClientHandler.SendDataAsync("ATMA");
+
+                }
+
+            });
+
+
+        }
+
+        private void TcpClientHandler_DataReceived(string obj)
+        {
+            if (!tcpStarted) return;
+            Task.Run(() =>
+            {
+              
+
+                evaluateResponse(obj.TrimEnd().Split(' '));
+
+            });
+
         }
     }
 }

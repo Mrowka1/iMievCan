@@ -1,6 +1,6 @@
 ﻿namespace iMievCan
 {
-    partial class Form1
+    partial class Form2
     {
         /// <summary>
         /// Wymagana zmienna projektanta.
